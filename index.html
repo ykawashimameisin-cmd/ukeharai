@@ -696,7 +696,7 @@ if (typeof module !== "undefined") module.exports = Core;
 
   var pc = null; // { year, month, days, menuDays, raw, draft, texts }
   var ledgers = []; // { name, buffer, ledger | error }
-  var overwrite = {}; // "品目-日": true
+  var overwrite = {}; // "品目-日": false でその日は上書きしない
 
   function storeKey() { return "ukh-pc-" + pc.year + "-" + pc.month; }
 
@@ -955,7 +955,7 @@ if (typeof module !== "undefined") module.exports = Core;
       conflictRows.forEach(function (r) {
         var key = r.item + "-" + r.c.day;
         var cb = el("input", { type: "checkbox" });
-        cb.checked = !!overwrite[key];
+        cb.checked = overwrite[key] !== false; // 最初はチェックあり（ほとんど上書きするため）
         cb.addEventListener("change", function () { overwrite[key] = cb.checked; });
         ct.appendChild(el("tr", {}, [
           el("td", { text: r.item }), el("td", { text: dayLabel(pc.year, pc.month, r.c.day) }),
@@ -966,7 +966,7 @@ if (typeof module !== "undefined") module.exports = Core;
       });
       box.appendChild(el("div", { className: "conflicts" }, [
         el("h3", { text: "受払簿にすでに別の数字が入っている日" }),
-        el("p", { className: "hint", text: "チェックしない日は受払簿の数字のまま残します。確認表の数字に置き換える日だけチェックしてください。" }),
+        el("p", { className: "hint", text: "チェックした日は確認表の数字で上書きします（最初は全部チェックしてあります）。受払簿の数字を残したい日だけ、チェックを外してください。" }),
         ct,
       ]));
     }
@@ -993,7 +993,7 @@ if (typeof module !== "undefined") module.exports = Core;
         var ledger = await Core.readLedger(JSZip, l.buffer, pc.month);
         var plan = Core.planLedger(ledger, tableValues(ledger.item), pc.days);
         plan.conflicts.forEach(function (c) {
-          if (overwrite[ledger.item + "-" + c.day]) plan.writes[c.day] = c.next ? c.next : null;
+          if (overwrite[ledger.item + "-" + c.day] !== false) plan.writes[c.day] = c.next ? c.next : null;
         });
         var n = Object.keys(plan.writes).length;
         if (!n) { lines.push(ledger.item + "：変更なし（ファイルは作りません）"); continue; }
